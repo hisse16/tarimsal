@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Primitive Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- ENTITY VALIDATION BLUEPRINTS ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email'])
+        && data.keys().size() >= 3
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 150
+        && data.id == request.auth.uid;
+    }
+
+    function isValidField(data) {
+      return data.keys().hasAll(['id', 'userId', 'name', 'city', 'district', 'totalArea', 'soilType'])
+        && data.keys().size() == 7
+        && data.id is string && data.id.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.name is string && data.name.size() <= 100
+        && data.city is string && data.city.size() <= 50
+        && data.district is string && data.district.size() <= 50
+        && data.totalArea is int && data.totalArea >= 0
+        && data.soilType is string && data.soilType.size() <= 50;
+    }
+
+    function isValidCrop(data) {
+      return data.keys().hasAll(['id', 'fieldId', 'userId', 'name', 'area', 'sowingDate', 'currentStage'])
+        && data.keys().size() == 7
+        && data.id is string && data.id.size() <= 128
+        && data.fieldId is string && data.fieldId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.name is string && data.name.size() <= 100
+        && data.area is int && data.area >= 0
+        && data.sowingDate is string && data.sowingDate.size() <= 20
+        && data.currentStage is string && data.currentStage.size() <= 100;
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['id', 'fieldId', 'cropId', 'userId', 'type', 'notes', 'date', 'operator'])
+        && data.keys().size() == 8
+        && data.id is string && data.id.size() <= 128
+        && data.fieldId is string && data.fieldId.size() <= 128
+        && data.cropId is string && data.cropId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.type is string && data.type.size() <= 50
+        && data.notes is string && data.notes.size() <= 1000
+        && data.date is string && data.date.size() <= 20
+        && data.operator is string && data.operator.size() <= 100;
+    }
+
+    function isValidCooperativePost(data) {
+      return data.keys().hasAll(['id', 'author', 'title', 'content', 'date', 'likes', 'replies', 'category'])
+        && data.keys().size() == 8
+        && data.id is string && data.id.size() <= 128
+        && data.author is string && data.author.size() <= 100
+        && data.title is string && data.title.size() <= 200
+        && data.content is string && data.content.size() <= 2000
+        && data.date is string && data.date.size() <= 30
+        && data.likes is int && data.likes >= 0
+        && data.replies is int && data.replies >= 0
+        && data.category is string && data.category.size() <= 50;
+    }
+
+    // --- COLLECTIONS ---
+
+    // 1. Users
+    match /users/{userId} {
+      allow get: if isSignedIn() && userId == request.auth.uid;
+      allow list: if false; // Deny query scraping of user directories
+      allow create: if isSignedIn() && isValidUser(incoming());
+      allow update: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'city', 'district', 'notificationPermission']);
+      allow delete: if false; // Immortality
+    }
+
+    // 2. Fields
+    match /fields/{fieldId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidField(incoming());
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && isValidField(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'totalArea', 'soilType']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 3. Crops
+    match /crops/{cropId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidCrop(incoming());
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && isValidCrop(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'area', 'sowingDate', 'currentStage']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 4. Activities (Journal logs)
+    match /activities/{activityId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidActivity(incoming());
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && isValidActivity(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['notes', 'type', 'operator']);
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // 5. Cooperative Posts (Public social network for community)
+    match /cooperative_posts/{postId} {
+      allow read: if isSignedIn(); // Open to all signed-in farmers
+      allow create: if isSignedIn() && isValidCooperativePost(incoming());
+      // Liking or adding replies modifies likes count and replies count
+      allow update: if isSignedIn() && (
+        // Action: Liking a post
+        (incoming().likes == existing().likes + 1 && incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
+        // Action: Comment reply added (replies count increment)
+        (incoming().replies == existing().replies + 1 && incoming().diff(existing()).affectedKeys().hasOnly(['replies']))
+      );
+      allow delete: if false; // Posts are permanent
+    }
+  }
+}

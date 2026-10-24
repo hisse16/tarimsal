@@ -1,0 +1,6 @@
+{
+  "name": "Pro-Agri",
+  "description": "Intelligent SaaS agricultural operations platform with Sentinel-2 soil moisture grids, real-time weather analytics, AI crop leaf disease diagnosis, NPK nutrient planners, and agronomist support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Calibri", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Calibri", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: "Calibri", "Segoe UI", system-ui, -apple-system, sans-serif;
+}

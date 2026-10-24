@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile settings and accounts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "city": { "type": "string" },
+        "district": { "type": "string" },
+        "notificationPermission": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "Field": {
+      "title": "Field",
+      "description": "Smart field or parcel managed by a farmer user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "city": { "type": "string" },
+        "district": { "type": "string" },
+        "totalArea": { "type": "integer" },
+        "soilType": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "city", "district", "totalArea", "soilType"]
+    },
+    "Crop": {
+      "title": "Crop",
+      "description": "Sown crops or plants in a specific field.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fieldId": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "area": { "type": "integer" },
+        "sowingDate": { "type": "string" },
+        "currentStage": { "type": "string" }
+      },
+      "required": ["id", "fieldId", "userId", "name", "area", "sowingDate", "currentStage"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "Agricultural journal records of farming activities.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fieldId": { "type": "string" },
+        "cropId": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "notes": { "type": "string" },
+        "date": { "type": "string" },
+        "operator": { "type": "string" }
+      },
+      "required": ["id", "fieldId", "cropId", "userId", "type", "notes", "date", "operator"]
+    },
+    "CooperativePost": {
+      "title": "CooperativePost",
+      "description": "Social bulletin announcements made by regional farmers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "author": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "likes": { "type": "integer" },
+        "replies": { "type": "integer" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "author", "title", "content", "date", "likes", "replies", "category"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Main user profiles."
+    },
+    "/fields/{fieldId}": {
+      "schema": "Field",
+      "description": "Fields registered by the farmers."
+    },
+    "/crops/{cropId}": {
+      "schema": "Crop",
+      "description": "Crops cultivated inside fields."
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Journal logs for fields and crops."
+    },
+    "/cooperative_posts/{postId}": {
+      "schema": "CooperativePost",
+      "description": "Peer messages and bulletin announcements."
+    }
+  }
+}
